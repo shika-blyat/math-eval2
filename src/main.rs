@@ -7,7 +7,10 @@ mod lexer;
 mod shunting_yard;
 mod tokens;
 
-use std::convert::TryInto;
+use std::{
+    convert::TryInto,
+    io::{self, Write},
+};
 
 use ast::{Expr, Node};
 use errors::{ErrReason, Error};
@@ -15,7 +18,7 @@ use lexer::Lexer;
 use shunting_yard::shunting_yard;
 use tokens::Operator;
 
-fn eval(expr: &Expr) -> Result<i32, Error> {
+fn eval_ast(expr: &Expr) -> Result<i32, Error> {
     Ok(match expr {
         Expr::Num(n) => *n,
         Expr::BinaryOp(
@@ -29,8 +32,8 @@ fn eval(expr: &Expr) -> Result<i32, Error> {
                 span: right_span,
             },
         ) => {
-            let left = eval(&left)?;
-            let right = eval(&right)?;
+            let left = eval_ast(left)?;
+            let right = eval_ast(right)?;
             match op {
                 Operator::Add => left + right,
                 Operator::Sub => left - right,
@@ -55,11 +58,29 @@ fn eval(expr: &Expr) -> Result<i32, Error> {
     })
 }
 
-fn main() {
-    let lexer = Lexer::new("1 / 5 + 1");
+fn eval(s: &str) -> Result<i32, Error> {
+    let lexer = Lexer::new(s);
     let tokens = lexer.tokenize();
-    println!("{:#?}", tokens);
-    let ast = shunting_yard(tokens.unwrap());
-    println!("{:#?}", ast);
-    println!("{:#?}", eval(&ast.unwrap()));
+    eval_ast(&shunting_yard(tokens?)?)
+}
+fn main() {
+    let mut buffer = String::with_capacity(1064);
+    loop {
+        print!(">>> ");
+        io::stdout().flush().unwrap();
+        io::stdin().read_line(&mut buffer).unwrap();
+        let buffer_s = buffer.as_str().trim();
+        if buffer_s.len() != 0 {
+            match buffer_s {
+                "quit" | "exit" => break,
+                s => {
+                    match eval(s) {
+                        Ok(v) => println!("{}", v),
+                        Err(e) => eprintln!("{:#?}", e),
+                    }
+                    buffer.clear()
+                }
+            }
+        }
+    }
 }
