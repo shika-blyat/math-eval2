@@ -1,21 +1,22 @@
-use crate::tokens::Operator;
+use crate::tokens::{Operator, Span};
 
-// 1 + 2 * 3
+#[derive(Debug)]
+pub struct Node<T> {
+    pub value: T,
+    pub span: Span,
+}
 
-// 1 + (2 * 3)
-
-// (1 + (2 * 3))
-
-/*
-    +
-   / \
-  1   *
-     / \
-    2   3
-*/
+impl<T> Into<Node<Box<T>>> for Node<T> {
+    fn into(self) -> Node<Box<T>> {
+        Node {
+            value: Box::new(self.value),
+            span: self.span,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Expr {
     Num(i32),
-    BinaryOp(Operator, Box<Expr>, Box<Expr>),
+    BinaryOp(Operator, Node<Box<Expr>>, Node<Box<Expr>>),
 }

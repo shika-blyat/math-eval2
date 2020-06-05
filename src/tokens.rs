@@ -12,15 +12,18 @@ pub struct Token {
 pub enum TokenKind {
     Number(i32),
     Op(Operator),
+    Eof,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Operator {
     Add,
     Sub,
     Mul,
     Div,
     Pow,
+    LParen,
+    RParen,
 }
 impl Operator {
     pub fn prec(&self) -> u8 {
@@ -28,6 +31,7 @@ impl Operator {
             Operator::Add | Operator::Sub => 5,
             Operator::Mul | Operator::Div => 10,
             Operator::Pow => 15,
+            Operator::LParen | Operator::RParen => 0,
         }
     }
     pub fn is_right_assoc(&self) -> bool {
@@ -42,6 +46,8 @@ impl From<char> for Operator {
             '*' => Operator::Mul,
             '/' => Operator::Div,
             '^' => Operator::Pow,
+            '(' => Operator::LParen,
+            ')' => Operator::RParen,
             _ => panic!("Cannot build an operator from `{}`", c),
         }
     }

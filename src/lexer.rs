@@ -1,7 +1,7 @@
 use std::{iter::Peekable, num::IntErrorKind, str::Chars};
 
 use crate::{
-    errors::{ErrReason, ParseErr},
+    errors::{ErrReason, Error},
     tokens::{Operator, Token, TokenKind},
 };
 
@@ -17,7 +17,7 @@ impl<'a> Lexer<'a> {
             position: 0,
         }
     }
-    pub fn tokenize(mut self) -> Result<Vec<Token>, ParseErr> {
+    pub fn tokenize(mut self) -> Result<Vec<Token>, Error> {
         let mut result_tokens = vec![];
         loop {
             match self.next() {
@@ -25,12 +25,12 @@ impl<'a> Lexer<'a> {
                     result_tokens.push(self.number(c)?);
                 }
                 Some(c) if c.is_whitespace() => (),
-                Some(c @ ('+' | '-' | '*' | '/' | '^')) => result_tokens.push(Token {
+                Some(c @ ('+' | '-' | '*' | '/' | '^' | '(' | ')')) => result_tokens.push(Token {
                     span: self.position..self.position + 1,
                     kind: TokenKind::Op(Operator::from(c)),
                 }),
                 Some(c) => {
-                    return Err(ParseErr {
+                    return Err(Error {
                         span: self.position..self.position + 1,
                         reason: ErrReason::UnexpectedChar(c),
                     })
@@ -38,9 +38,13 @@ impl<'a> Lexer<'a> {
                 None => break,
             }
         }
+        result_tokens.push(Token {
+            span: std::usize::MAX..std::usize::MAX,
+            kind: TokenKind::Eof,
+        });
         Ok(result_tokens)
     }
-    fn number(&mut self, first_char: char) -> Result<Token, ParseErr> {
+    fn number(&mut self, first_char: char) -> Result<Token, Error> {
         let mut num = first_char.to_string();
         while let Some(c) = self.peek() {
             if c.is_ascii_digit() {
@@ -57,13 +61,13 @@ impl<'a> Lexer<'a> {
                 kind: TokenKind::Number(num),
             }),
             Err(e) => match e.kind() {
-                IntErrorKind::Overflow => Err(ParseErr {
+                IntErrorKind::Overflow => Err(Error {
                     span,
                     reason: ErrReason::NumOverflow {
                         max_size: "2_147_483_647",
                     },
                 }),
-                IntErrorKind::Underflow => Err(ParseErr {
+                IntErrorKind::Underflow => Err(Error {
                     span,
                     reason: ErrReason::NumUnderflow {
                         min_size: "-2_147_483_648",
